@@ -34,14 +34,30 @@ int main(int argc,char*argv[]){
 
   in vec2 vTexCoord;
 
+  layout(binding=0)uniform sampler2D tex;
+
   out vec4 fColor;
   void main(){
-    fColor = vec4(vTexCoord,0,1);
+    fColor = texture(tex,vTexCoord);
 
   }
   ).");
 
   auto prg = std::make_shared<Program>(vs,fs);
+
+  float texData[10*10*3];
+  for(int y=0;y<10;++y)
+    for(int x=0;x<10;++x)
+      for(int c=0;c<3;++c)
+        texData[(y*10+x)*3+c] = (float)(x==y);
+
+  auto tex = std::make_shared<Texture>(GL_TEXTURE_2D,GL_RGB32F,1,10,10);
+  tex->setData2D(texData,GL_RGB,GL_FLOAT);
+
+  tex->texParameteri(GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+  tex->texParameteri(GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  tex->texParameteri(GL_TEXTURE_WRAP_S,GL_CLAMP);
+  tex->texParameteri(GL_TEXTURE_WRAP_T,GL_CLAMP);
 
   bool running = true;
   while(running){// MAIN LOOP
@@ -54,6 +70,7 @@ int main(int argc,char*argv[]){
     glClear(GL_COLOR_BUFFER_BIT);
 
     prg->use();
+    tex->bind(0);
     glDrawArrays(GL_TRIANGLE_STRIP,0,3);
 
     SDL_GL_SwapWindow(window);
