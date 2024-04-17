@@ -4,7 +4,14 @@
 #include<geGL/geGL.h>
 #include<geGL/StaticCalls.h>
 
+#include<videoReader.h>
+#include<timer.hpp>
+
 using namespace ge::gl;
+
+#ifndef CMAKE_ROOT_DIR
+#define CMAKE_ROOT_DIR "."
+#endif
 
 int main(int argc,char*argv[]){
   std::cerr << "Ahoj" << std::endl;
@@ -26,6 +33,7 @@ int main(int argc,char*argv[]){
     gl_Position = vec4(coord*4-1,0,1);
 
     vTexCoord = coord*2;
+    vTexCoord.y = 1-vTexCoord.y;
   }
   ).");
 
@@ -45,21 +53,22 @@ int main(int argc,char*argv[]){
 
   auto prg = std::make_shared<Program>(vs,fs);
 
-  float texData[10*10*3];
-  for(int y=0;y<10;++y)
-    for(int x=0;x<10;++x)
-      for(int c=0;c<3;++c)
-        texData[(y*10+x)*3+c] = (float)(x==y);
+  auto video = Video(CMAKE_ROOT_DIR "/res/mtm.mp4");
 
-  auto tex = std::make_shared<Texture>(GL_TEXTURE_2D,GL_RGB32F,1,10,10);
-  tex->setData2D(texData,GL_RGB,GL_FLOAT);
+
+  auto tex = std::make_shared<Texture>(GL_TEXTURE_2D,GL_RGB8,1,
+      video.getWidth(),video.getHeight());
 
   tex->texParameteri(GL_TEXTURE_MAG_FILTER,GL_LINEAR);
   tex->texParameteri(GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   tex->texParameteri(GL_TEXTURE_WRAP_S,GL_CLAMP);
   tex->texParameteri(GL_TEXTURE_WRAP_T,GL_CLAMP);
 
+  auto timer = Timer<float>();
+  timer.reset();
+
   bool running = true;
+  float lastFrameTime = 0.f;
   while(running){// MAIN LOOP
     SDL_Event event;
     while(SDL_PollEvent(&event)){ // EVENT LOOP
@@ -68,6 +77,13 @@ int main(int argc,char*argv[]){
 
     glClearColor(.2,.2,1,1);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    float newTime = timer.elapsedFromStart();
+    if((newTime-lastFrameTime)>1./video.getFps()){
+      tex->setData2D(video.getData(),GL_BGR,GL_UNSIGNED_BYTE);
+      lastFrameTime = newTime;
+    }
+
 
     prg->use();
     tex->bind(0);
