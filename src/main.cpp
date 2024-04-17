@@ -14,6 +14,35 @@ int main(int argc,char*argv[]){
 
   ge::gl::init();
 
+  auto vs = std::make_shared<Shader>(GL_VERTEX_SHADER,R".(
+  #version 450
+
+  out vec2 vTexCoord;
+
+  void main(){
+
+    vec2 coord = vec2(gl_VertexID&1,gl_VertexID>>1);
+
+    gl_Position = vec4(coord*4-1,0,1);
+
+    vTexCoord = coord*2;
+  }
+  ).");
+
+  auto fs = std::make_shared<Shader>(GL_FRAGMENT_SHADER,R".(
+  #version 450
+
+  in vec2 vTexCoord;
+
+  out vec4 fColor;
+  void main(){
+    fColor = vec4(vTexCoord,0,1);
+
+  }
+  ).");
+
+  auto prg = std::make_shared<Program>(vs,fs);
+
   bool running = true;
   while(running){// MAIN LOOP
     SDL_Event event;
@@ -23,6 +52,10 @@ int main(int argc,char*argv[]){
 
     glClearColor(.2,.2,1,1);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    prg->use();
+    glDrawArrays(GL_TRIANGLE_STRIP,0,3);
+
     SDL_GL_SwapWindow(window);
   }
 
